@@ -21,6 +21,8 @@
             --danger-color: #dc3545;
             --info-color: #6610f2;
             --info-color-light: #f0e8ff;
+            --teal-color: #20c997;
+            --teal-color-light: #e9f9f4;
             --gray-color: #6c757d;
             --text-color: #212529;
             --text-light-color: #495057;
@@ -278,6 +280,7 @@
         .status-paid { background-color: #eaf6ec; color: #28a745; }
         .status-pending { background-color: #fff8e1; color: #ffc107; }
         .status-delayed { background-color: var(--info-color-light); color: var(--info-color); }
+        .status-on_the_way { background-color: var(--teal-color-light); color: var(--teal-color); }
 
         /* Tables */
         .table-wrapper {
@@ -419,7 +422,7 @@
         
         .modal-body, .panel-body {
             padding: 20px;
-            max-height: 70vh;
+            max-height: 85vh;
             overflow-y: auto;
         }
         
@@ -505,6 +508,12 @@
         .bar:hover .bar-value { opacity: 1; }
 
         /* Bookings Page */
+        .doorstep-icon {
+            width: 16px;
+            height: 16px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
         .view-switcher {
             display: flex;
             gap: 8px;
@@ -558,6 +567,10 @@
             border-left: 5px solid;
             transition: all 0.2s ease;
         }
+        .booking-block.doorstep {
+             background-image: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.1) 75%, transparent 75%, transparent);
+            background-size: 40px 40px;
+        }
         .booking-block:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
@@ -576,6 +589,7 @@
         .booking-block.status-completed { background-color: var(--success-color); border-color: #1e7e34; }
         .booking-block.status-cancelled { background-color: var(--gray-color); border-color: #495057; opacity: 0.7; }
         .booking-block.status-delayed { background-color: var(--info-color); border-color: #4a0c9c; }
+        .booking-block.status-on_the_way { background-color: var(--teal-color); border-color: #1a9c75; }
 
         .current-time-indicator {
             position: absolute;
@@ -775,7 +789,7 @@
         .detail-item { margin-bottom: 16px; }
         .detail-item .label { font-size: 0.8rem; color: var(--text-light-color); margin-bottom: 2px; }
         .detail-item .value { font-weight: 500; }
-        #delay-input-container { display: none; margin-top: 10px; }
+        #delay-input-container { display: none; margin-top: 10px; align-items: center;}
         #delay-input-container input { width: 80px; margin-right: 10px; }
         .audit-log { list-style: none; }
         .audit-log li { padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border-color); }
@@ -808,6 +822,7 @@
         /* Conflict message in modal */
         #conflict-message { background-color: #fffbe6; border: 1px solid #ffe58f; color: #d46b08; padding: 10px; border-radius: var(--border-radius); font-size: 14px; margin-top: 16px; display: none; }
         #conflict-message .suggestion-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+
     </style>
 </head>
 <body>
@@ -848,7 +863,7 @@
                 <span id="current-date"></span>
             </div>
             <div class="header-right">
-                <button class="btn btn-primary" id="add-walkin-header-btn">Add Walk-in</button>
+                <button class="btn btn-primary" id="add-walkin-btn">Add Walk-in</button>
                 <div class="user-avatar">AD</div>
             </div>
         </header>
@@ -999,6 +1014,13 @@
                                 <label for="service-name">Service Name</label>
                                 <input type="text" id="service-name" required>
                             </div>
+                             <div class="form-group">
+                                <label for="service-type">Service Type</label>
+                                <select id="service-type" required>
+                                    <option value="onsite">On-site</option>
+                                    <option value="doorstep">Doorstep</option>
+                                </select>
+                            </div>
                             <div class="form-group">
                                 <label for="service-price">Price (₹)</label>
                                 <input type="number" id="service-price" required>
@@ -1021,16 +1043,17 @@
     <!-- Modals and Overlays -->
     <div class="overlay" id="overlay"></div>
 
-    <div class="modal" id="add-walkin-modal" role="dialog" aria-labelledby="add-walkin-title" aria-modal="true">
+    <div class="modal" id="walkin-modal" role="dialog" aria-labelledby="walkin-title" aria-modal="true">
         <div class="modal-header">
-            <h3 id="add-walkin-title">Add Walk-in Booking</h3>
+            <h3 id="walkin-title">Add Walk-in Booking</h3>
             <button class="close-btn" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
             <form id="walkin-form">
-                <div class="form-group"><label for="customer-name">Customer Name</label><input type="text" id="customer-name" required></div>
-                <div class="form-group"><label for="car-no">Car Number</label><input type="text" id="car-no" required></div>
+                <div class="form-group"><label for="customer-name">Customer Name</label><input type="text" id="customer-name" required value="Walk-in Customer"></div>
+                <div class="form-group"><label for="car-no">Car Number</label><input type="text" id="car-no" value="N/A"></div>
                 <div class="form-group"><label for="service-select">Service</label><select id="service-select" required></select></div>
+                <div class="form-group" id="location-form-group" style="display: none;"><label for="customer-location">Customer Address</label><input type="text" id="customer-location"></div>
                 <div class="form-group"><label for="booking-time">Time</label><input type="time" id="booking-time" step="900" required></div>
                 <div id="conflict-message"></div>
                 <div class="form-actions">
@@ -1059,17 +1082,17 @@ document.addEventListener('DOMContentLoaded', () => {
         _seedData: {
             profile: { name: "Aqua Shine Car Wash", address: "123, MG Road, Pune, Maharashtra", hours: "9:00 AM - 7:00 PM" },
             services: [
-                { id: 1, name: "Exterior Wash", price: 300, duration: 30 },
-                { id: 2, name: "Interior Cleaning", price: 500, duration: 45 },
-                { id: 3, name: "Full Wash", price: 700, duration: 60 },
-                { id: 4, name: "Premium Detailing", price: 1500, duration: 120 }
+                { id: 1, name: "Exterior Wash", price: 300, duration: 30, type: "onsite" },
+                { id: 2, name: "Interior Cleaning", price: 500, duration: 45, type: "onsite" },
+                { id: 3, name: "Full Wash", price: 700, duration: 60, type: "onsite" },
+                { id: 4, name: "Doorstep Full Wash", price: 1200, duration: 90, type: "doorstep" }
             ],
             bookings: [
                 { id: 1, customer: "Rohan Verma", carNo: "MH14AB1234", serviceId: 3, time: "09:30", date: "2025-09-22", status: "completed", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."},{ts: new Date().toISOString(), event: "Status changed to completed."}] },
-                { id: 2, customer: "Priya Sharma", carNo: "DL03CD5678", serviceId: 1, time: "10:30", date: "2025-09-23", status: "upcoming", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."}] },
-                { id: 3, customer: "Amit Singh", carNo: "KA05EF9012", serviceId: 2, time: "11:30", date: "2025-09-23", status: "in_progress", source: 'walk-in', auditLog: [{ts: new Date().toISOString(), event: "Walk-in created."},{ts: new Date().toISOString(), event: "Status changed to in_progress."}] },
-                { id: 4, customer: "Anjali Gupta", carNo: "MH12GH3456", serviceId: 4, time: "14:00", date: "2025-09-23", status: "upcoming", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."}] },
-                { id: 5, customer: "Sandeep Kumar", carNo: "PN01JK7890", serviceId: 1, time: "16:00", date: "2025-09-21", status: "cancelled", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."},{ts: new Date().toISOString(), event: "Booking cancelled."}] },
+                { id: 2, customer: "Priya Sharma", carNo: "DL03CD5678", serviceId: 1, time: "15:00", date: new Date().toISOString().split('T')[0], status: "upcoming", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."}] },
+                { id: 3, customer: "Amit Singh", carNo: "KA05EF9012", serviceId: 2, time: "16:00", date: new Date().toISOString().split('T')[0], status: "upcoming", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."}] },
+                { id: 4, customer: "Anjali Gupta", carNo: "MH12GH3456", serviceId: 4, time: "14:00", date: new Date().toISOString().split('T')[0], status: "on_the_way", source: 'online', location: "123, Green Street, Mumbai", auditLog: [{ts: new Date().toISOString(), event: "Booking created."},{ts: new Date().toISOString(), event: "Status changed to on_the_way."}] },
+                { id: 5, customer: "Sandeep Kumar", carNo: "PN01JK7890", serviceId: 1, time: "17:00", date: new Date().toISOString().split('T')[0], status: "upcoming", source: 'online', auditLog: [{ts: new Date().toISOString(), event: "Booking created."}] },
             ],
             earnings: [
                 { date: "2025-09-20", bookingId: "B001", serviceName: "Full Wash", gross: 700, platformFee: 70, net: 630, status: "Paid" },
@@ -1156,18 +1179,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. UI RENDERERS ---
     const UIRenderer = {
         renderDashboard: function() {
-            const bookings = DataStore.getBookings();
+            const bookings = DataStore.getBookings().filter(b => b.date === new Date().toISOString().split('T')[0]);
             const services = DataStore.getServices();
             const allEarnings = DataStore.getEarnings();
-            
+            const doorstepBookingsToday = bookings.filter(b => {
+                const service = DataStore.getService(b.serviceId);
+                return service && service.type === 'doorstep';
+            }).length;
+
             const today = new Date().toISOString().split('T')[0];
             const todayNetEarnings = allEarnings
                 .filter(e => e.date === today)
                 .reduce((sum, e) => sum + e.net, 0);
 
             const statsHTML = `
-                <div class="card stat-card"><span class="value">${bookings.length}</span><span class="label">Total Bookings</span></div>
-                <div class="card stat-card"><span class="value">${bookings.filter(b => b.status === 'upcoming' || b.status === 'in_progress').length}</span><span class="label">Pending</span></div>
+                <div class="card stat-card"><span class="value">${bookings.length}</span><span class="label">Today's Bookings</span></div>
+                <div class="card stat-card"><span class="value">${doorstepBookingsToday}</span><span class="label">Doorstep Bookings</span></div>
                 <div class="card stat-card"><span class="value">₹${todayNetEarnings.toLocaleString('en-IN')}</span><span class="label">Today's Net Earnings</span></div>
                 <div class="card stat-card"><span class="value">${services.length}</span><span class="label">Active Services</span></div>
             `;
@@ -1215,17 +1242,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBookingsPage: function() { this.renderBookingsList(); this.renderDayView(); },
         renderBookingsList: function() {
             const bookings = DataStore.getBookings().sort((a,b) => a.time.localeCompare(b.time));
-            const services = DataStore.getServices();
             const tableBody = document.querySelector('#bookings-table tbody');
             if (bookings.length === 0) { tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No bookings found.</td></tr>'; return; }
             tableBody.innerHTML = bookings.map(booking => {
-                const service = services.find(s => s.id === booking.serviceId) || { name: 'Unknown' };
+                const service = DataStore.getService(booking.serviceId) || { name: 'Unknown', type: 'onsite' };
+                const doorstepIcon = service.type === 'doorstep' ? `<svg class="doorstep-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`: '';
                 return `
                     <tr data-booking-id="${booking.id}">
-                        <td>${booking.customer}</td><td>${booking.carNo}</td><td>${service.name}</td><td>${booking.time}</td>
-                        <td><span class="status-chip status-${booking.status.replace('_', '')}">${booking.status.replace('_', ' ')}</span></td>
+                        <td>${booking.customer}</td><td>${booking.carNo}</td><td>${service.name} ${doorstepIcon}</td><td>${booking.time}</td>
+                        <td><span class="status-chip status-${booking.status.replace(/ /g, '_')}">${booking.status.replace('_', ' ')}</span></td>
                         <td class="table-actions">
-                            ${booking.status === 'upcoming' || booking.status === 'in_progress' ? `
+                            ${booking.status !== 'completed' && booking.status !== 'cancelled' ? `
                             <button class="action-complete" data-action="complete" data-id="${booking.id}" title="Mark Complete"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg></button>
                             <button class="action-cancel" data-action="cancel" data-id="${booking.id}" title="Cancel Booking"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>` : ''}
                         </td></tr>`;
@@ -1256,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const left = (startMinutes / totalMinutes) * 100;
                 const width = (service.duration / totalMinutes) * 100;
                 const block = document.createElement('div');
-                block.className = `booking-block status-${booking.status.replace('_', '')}`;
+                block.className = `booking-block status-${booking.status.replace(/ /g, '_')} ${service.type === 'doorstep' ? 'doorstep' : ''}`;
                 block.style.left = `${left}%`;
                 block.style.width = `${width}%`;
                 block.style.top = `${20 + (index % 3) * 70}px`; 
@@ -1299,10 +1326,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const platformFee = service.price * 0.1;
             const netPayout = service.price - platformFee;
 
-            const statusOptions = ['upcoming', 'in_progress', 'delayed', 'completed', 'cancelled'];
+            let statusOptions = ['upcoming', 'in_progress', 'delayed', 'completed', 'cancelled'];
+            if (service.type === 'doorstep') {
+                statusOptions.splice(2, 0, 'on_the_way');
+            }
+
             const statusSelectHTML = `
                 <select id="status-selector" data-booking-id="${booking.id}" class="form-group" style="padding: 6px; border-radius: 4px;">
-                    ${statusOptions.map(s => `<option value="${s}" ${s === booking.status ? 'selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}
+                    ${statusOptions.map(s => `<option value="${s}" ${s.replace(/ /g, '_') === booking.status ? 'selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}
                 </select>
             `;
 
@@ -1310,6 +1341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="detail-item"><span class="label">Customer</span><span class="value">${booking.customer}</span></div>
                 <div class="detail-item"><span class="label">Car Number</span><span class="value">${booking.carNo}</span></div>
                 <div class="detail-item"><span class="label">Service</span><span class="value">${service.name}</span></div>
+                ${service.type === 'doorstep' ? `<div class="detail-item"><span class="label">Location</span><span class="value">${booking.location || 'Not specified'}</span></div>` : ''}
                 <div class="detail-item"><span class="label">Date</span><span class="value">${booking.date}</span></div>
                 <div class="detail-item"><span class="label">Slot</span><span class="value">${booking.time} - ${endTimeStr}</span></div>
                 <div class="detail-item"><span class="label">Status</span><div class="value">${statusSelectHTML}</div></div>
@@ -1318,6 +1350,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn btn-primary btn-sm" id="confirm-delay-btn" data-booking-id="${booking.id}">Confirm Delay</button>
                 </div>
                 <div class="detail-item"><span class="label">Source</span><span class="value">${booking.source}</span></div>
+                
+                <h4 style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 1rem; font-weight: 600;">Payment Details</h4>
+                <div class="detail-item">
+                    <span class="label">Service Price</span>
+                    <span class="value">₹${service.price.toFixed(2)}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Platform Fee (10%)</span>
+                    <span class="value" style="color: var(--danger-color);">- ₹${platformFee.toFixed(2)}</span>
+                </div>
+                <div class="detail-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+                    <span class="label">Net Payout</span>
+                    <span class="value" style="font-weight: 700;">₹${netPayout.toFixed(2)}</span>
+                </div>
+
                 <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
                 <div class="detail-item">
                     <span class="label">Audit Log</span>
@@ -1428,7 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (services.length === 0) { listEl.innerHTML = '<p>No services added yet.</p>'; return; }
             listEl.innerHTML = services.map(s => `
                 <div class="service-item">
-                    <div class="service-info"><span class="name">${s.name}</span><span class="details">₹${s.price} | ${s.duration} mins</span></div>
+                    <div class="service-info"><span class="name">${s.name}</span><span class="details">₹${s.price} | ${s.duration} mins | ${s.type}</span></div>
                     <div class="service-actions">
                         <button class="action-edit" title="Edit" data-service-id="${s.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
                         <button class="action-delete" title="Delete" data-service-id="${s.id}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
@@ -1438,6 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const service = DataStore.getService(serviceId);
             document.getElementById('service-id').value = service.id;
             document.getElementById('service-name').value = service.name;
+            document.getElementById('service-type').value = service.type;
             document.getElementById('service-price').value = service.price;
             document.getElementById('service-duration').value = service.duration;
             document.querySelector('#service-form button[type="submit"]').textContent = 'Update Service';
@@ -1449,10 +1497,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('#service-form button[type="submit"]').textContent = 'Add Service';
             document.getElementById('cancel-edit-btn').style.display = 'none';
         },
-        populateServiceSelect: function() {
+        populateServiceSelect: function(selectId) {
             const services = DataStore.getServices();
-            const select = document.getElementById('service-select');
-            select.innerHTML = services.map(s => `<option value="${s.id}">${s.name} (₹${s.price}, ${s.duration} mins)</option>`).join('');
+            const select = document.getElementById(selectId);
+            select.innerHTML = services.map(s => `<option value="${s.id}">${s.name} (${s.type})</option>`).join('');
         }
     };
 
@@ -1495,10 +1543,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(modalId).classList.add('active');
             document.getElementById('overlay').classList.add('active');
             document.body.style.overflow = 'hidden';
-            if (modalId === 'add-walkin-modal') {
-                UIRenderer.populateServiceSelect();
+            if (modalId === 'walkin-modal') {
+                UIRenderer.populateServiceSelect('service-select');
                 document.getElementById('walkin-form').reset();
                 document.getElementById('conflict-message').style.display = 'none';
+                const serviceId = document.getElementById('service-select').value;
+                const service = DataStore.getService(parseInt(serviceId));
+                document.getElementById('location-form-group').style.display = service.type === 'doorstep' ? 'block' : 'none';
             }
         },
         closeModal: function() {
@@ -1514,7 +1565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         
         analyzeConflict: function(time, serviceId, bookingToIgnoreId = null) {
-            const maxDelay = 15; // in minutes
+            const maxDelay = 30; // in minutes
             let bookings = DataStore.getBookings().sort((a,b) => a.time.localeCompare(b.time));
             if(bookingToIgnoreId) {
                 bookings = bookings.filter(b => b.id !== bookingToIgnoreId);
@@ -1529,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newEnd = newStart + service.duration;
 
             const conflictingBooking = bookings.find(b => {
-                if (b.status !== 'upcoming' && b.status !== 'in_progress') return false;
+                if (b.status !== 'upcoming' && b.status !== 'in_progress' && b.status !== 'delayed' && b.status !== 'on_the_way') return false;
                 const existingService = DataStore.getService(b.serviceId);
                 if (!existingService) return false;
                 const existingStart = timeToMinutes(b.time);
@@ -1561,7 +1612,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Fallback to finding next available slot
-            const nextSlot = this.findNextAvailableSlot(time, service.duration, bookingToIgnoreId);
+            const nextSlot = this.findNextAvailableSlot(time, service.id, bookingToIgnoreId);
             return { conflict: conflictingBooking, suggestion: 'next_slot', details: { nextSlot } };
         },
 
@@ -1569,9 +1620,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const service = DataStore.getService(parseInt(serviceId));
             if(!service) return null;
             let nextTime = App.timeToMinutes(startTime);
-            for (let i = 0; i < 20; i++) { // Limit search
+            for (let i = 0; i < 40; i++) { // Limit search
                 nextTime += 15;
                 const timeStr = App.minutesToTime(nextTime);
+                if (App.timeToMinutes(timeStr) + service.duration > 19 * 60) return null; // Past closing time
                 if (!this.analyzeConflict(timeStr, service.id, bookingToIgnoreId).conflict) {
                     return timeStr;
                 }
@@ -1583,10 +1635,8 @@ document.addEventListener('DOMContentLoaded', () => {
             DataStore.updateBookingStatus(id, newStatus);
             this.showToast(`Booking status changed to ${newStatus.replace('_', ' ')}.`, 'success');
             
-            // Re-render all relevant parts of the UI
             this.refreshAllViews();
             
-            // If side panel is open, refresh it
             const sidePanel = document.getElementById('booking-details-panel');
             if (sidePanel.classList.contains('active')) {
                 UIRenderer.renderBookingDetails(id);
@@ -1607,18 +1657,28 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let lastEndTime = newStartTime + service.duration;
             let pushedCount = 0;
+            const closingTimeMinutes = 19 * 60; // 7 PM
+            let cascadeStopped = false;
+
 
             const startIndex = allBookings.findIndex(b => b.id === bookingId) + 1;
 
             for(let i = startIndex; i < allBookings.length; i++) {
                 const currentBooking = allBookings[i];
-                if(currentBooking.status === 'upcoming' || currentBooking.status === 'in_progress' || currentBooking.status === 'delayed') {
+                if(currentBooking.status === 'upcoming' || currentBooking.status === 'in_progress' || currentBooking.status === 'delayed' || currentBooking.status === 'on_the_way') {
                     const currentStartTime = App.timeToMinutes(currentBooking.time);
                     if (currentStartTime < lastEndTime) {
                         const currentService = DataStore.getService(currentBooking.serviceId);
+                        const newBookingEndTime = lastEndTime + currentService.duration;
+
+                        if (newBookingEndTime > closingTimeMinutes) {
+                            cascadeStopped = true;
+                            break; // Stop the cascade
+                        }
+
                         currentBooking.time = App.minutesToTime(lastEndTime);
                         currentBooking.auditLog.push({ ts: new Date().toISOString(), event: `Pushed back due to a prior delay.` });
-                        lastEndTime += currentService.duration;
+                        lastEndTime = newBookingEndTime;
                         pushedCount++;
                     } else {
                         break; // No more conflicts in the chain
@@ -1627,7 +1687,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             // Batch update all modified bookings
             allBookings.forEach(b => DataStore.updateBooking(b.id, b));
-            this.showToast(`Booking delayed. ${pushedCount} subsequent bookings were pushed back.`, 'success');
+            
+            let toastMessage = `Booking delayed. ${pushedCount > 0 ? `${pushedCount} subsequent bookings were pushed back.` : ''}`;
+            if (cascadeStopped) {
+                toastMessage += " Some later bookings could not be rescheduled automatically.";
+            }
+            this.showToast(toastMessage, 'success');
+
             this.refreshAllViews();
             UIRenderer.renderBookingDetails(bookingId);
         },
@@ -1678,7 +1744,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('menu-toggle').addEventListener('click', () => self.toggleSidebar());
 
             // Modals & Panels
-            document.getElementById('add-walkin-header-btn').addEventListener('click', () => self.openModal('add-walkin-modal'));
+            document.getElementById('add-walkin-btn').addEventListener('click', () => self.openModal('walkin-modal'));
             document.getElementById('overlay').addEventListener('click', () => self.closeModal());
             document.querySelectorAll('[data-close-modal], [data-close-panel]').forEach(btn => btn.addEventListener('click', () => self.closeModal()));
             document.addEventListener('keydown', e => { if (e.key === "Escape") self.closeModal(); });
@@ -1703,26 +1769,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('day-view-timeline').addEventListener('click', e => {
                 const bookingBlock = e.target.closest('.booking-block');
                 if (bookingBlock) { self.openSidePanel('booking-details-panel', parseInt(bookingBlock.dataset.bookingId)); } 
-                else {
-                    const timelineRect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - timelineRect.left;
-                    const percentClicked = clickX / timelineRect.width;
-                    const minutesIntoDay = percentClicked * 10 * 60;
-                    const hour = Math.floor(minutesIntoDay / 60) + 9;
-                    const minute = Math.round((minutesIntoDay % 60) / 15) * 15;
-                    const timeString = `${String(hour).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
-                    self.openModal('add-walkin-modal');
-                    document.getElementById('booking-time').value = timeString;
-                }
             });
-            document.getElementById('bookings').addEventListener('click', e => {
-                const button = e.target.closest('button[data-action]');
-                if (!button) return;
-                const bookingId = parseInt(button.dataset.id);
-                const action = button.dataset.action;
-                if (action === 'complete') self.handleBookingStatusUpdate(bookingId, 'completed');
-                else if (action === 'cancel' && confirm('Are you sure?')) self.handleBookingStatusUpdate(bookingId, 'cancelled');
-            });
+            
             document.getElementById('booking-details-content').addEventListener('change', e => {
                 if(e.target.id === 'status-selector') {
                     const newStatus = e.target.value;
@@ -1752,10 +1800,23 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('walkin-form').addEventListener('submit', e => {
                 e.preventDefault();
                 const serviceId = document.getElementById('service-select').value;
+                const service = DataStore.getService(parseInt(serviceId));
+                const locationInput = document.getElementById('customer-location');
+
+                if(service.type === 'doorstep' && !locationInput.value) {
+                    self.showToast('Please enter a customer address for doorstep service.', 'error');
+                    locationInput.focus();
+                    return;
+                }
+
                 const newBooking = {
-                    customer: document.getElementById('customer-name').value, carNo: document.getElementById('car-no').value,
-                    serviceId: parseInt(serviceId), time: document.getElementById('booking-time').value,
-                    status: 'upcoming', source: 'walk-in'
+                    customer: document.getElementById('customer-name').value, 
+                    carNo: document.getElementById('car-no').value,
+                    serviceId: parseInt(serviceId), 
+                    time: document.getElementById('booking-time').value,
+                    status: 'upcoming', 
+                    source: 'walk-in',
+                    location: service.type === 'doorstep' ? locationInput.value : null
                 };
 
                 const analysis = self.analyzeConflict(newBooking.time, newBooking.serviceId);
@@ -1781,16 +1842,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 self.closeModal();
                 self.refreshAllViews();
             });
-
             document.getElementById('conflict-message').addEventListener('click', e => {
                 const button = e.target.closest('button[data-action]');
                 if (!button) return;
 
                 const action = button.dataset.action;
                 const newBookingData = {
-                    customer: document.getElementById('customer-name').value, carNo: document.getElementById('car-no').value,
-                    serviceId: parseInt(document.getElementById('service-select').value), time: document.getElementById('booking-time').value,
-                    status: 'upcoming', source: 'walk-in'
+                    customer: document.getElementById('customer-name').value, 
+                    carNo: document.getElementById('car-no').value,
+                    serviceId: parseInt(document.getElementById('service-select').value), 
+                    time: document.getElementById('booking-time').value,
+                    status: 'upcoming', 
+                    source: 'walk-in'
                 };
 
                 if (action === 'override') {
@@ -1799,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const conflictingBookingId = parseInt(button.dataset.conflictId);
                     const newTime = button.dataset.newTime;
                     const originalBooking = DataStore.getBookings().find(b => b.id === conflictingBookingId);
-                    DataStore.updateBooking(conflictingBookingId, { time: newTime, auditLog: [...originalBooking.auditLog, { ts: new Date().toISOString(), event: `Booking delayed to ${newTime} for walk-in.` }] });
+                    DataStore.updateBooking(conflictingBookingId, { time: newTime, status: 'delayed', auditLog: [...originalBooking.auditLog, { ts: new Date().toISOString(), event: `Booking delayed to ${newTime} for walk-in.` }] });
                     self.showToast(`Delayed ${originalBooking.customer} to ${newTime}.`, 'info');
                 } else if (action === 'book-next') {
                     document.getElementById('booking-time').value = button.dataset.time;
@@ -1812,6 +1875,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 self.closeModal();
                 self.refreshAllViews();
             });
+            document.getElementById('service-select').addEventListener('change', e => {
+                 const service = DataStore.getService(parseInt(e.target.value));
+                 document.getElementById('location-form-group').style.display = service.type === 'doorstep' ? 'block' : 'none';
+            });
+
 
             // Profile & Services
             document.getElementById('profile-form').addEventListener('submit', e => { e.preventDefault(); DataStore.saveProfile({ name: document.getElementById('car-wash-name').value, address: document.getElementById('car-wash-address').value, hours: document.getElementById('opening-hours').value }); self.showToast('Profile updated!', 'success'); });
@@ -1822,11 +1890,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (button.classList.contains('action-edit')) { UIRenderer.populateServiceForm(serviceId); } 
                 else if (button.classList.contains('action-delete') && confirm('Delete this service?')) { DataStore.deleteService(serviceId); UIRenderer.renderServicesList(); self.showToast('Service deleted.', 'info'); }
             });
-            document.getElementById('service-form').addEventListener('submit', e => { e.preventDefault(); const service = { id: parseInt(document.getElementById('service-id').value) || null, name: document.getElementById('service-name').value, price: parseFloat(document.getElementById('service-price').value), duration: parseInt(document.getElementById('service-duration').value) }; if (service.id) { DataStore.updateService(service); self.showToast('Service updated!', 'success'); } else { DataStore.addService(service); self.showToast('New service added!', 'success'); } UIRenderer.resetServiceForm(); UIRenderer.renderServicesList(); });
+            document.getElementById('service-form').addEventListener('submit', e => { e.preventDefault(); const service = { id: parseInt(document.getElementById('service-id').value) || null, name: document.getElementById('service-name').value, type: document.getElementById('service-type').value, price: parseFloat(document.getElementById('service-price').value), duration: parseInt(document.getElementById('service-duration').value) }; if (service.id) { DataStore.updateService(service); self.showToast('Service updated!', 'success'); } else { DataStore.addService(service); self.showToast('New service added!', 'success'); } UIRenderer.resetServiceForm(); UIRenderer.renderServicesList(); });
             document.getElementById('cancel-edit-btn').addEventListener('click', () => UIRenderer.resetServiceForm());
             
             // Dashboard
-            document.getElementById('simulate-booking-btn').addEventListener('click', () => { const services = DataStore.getServices(); if (services.length === 0) { self.showToast("Add a service first.", 'error'); return; } const randomService = services[Math.floor(Math.random() * services.length)]; const randomHour = Math.floor(Math.random() * 8) + 9; const randomMinute = ['00','15','30','45'][Math.floor(Math.random() * 4)]; const newBooking = { customer: "Simran Kaur", carNo: "PB10XY1234", serviceId: randomService.id, time: `${String(randomHour).padStart(2, '0')}:${randomMinute}`, status: 'upcoming', source: 'online' }; DataStore.addBooking(newBooking); self.showToast(`New Online Booking: ${randomService.name} at ${newBooking.time}`, 'info'); self.refreshAllViews()});
+            document.getElementById('simulate-booking-btn').addEventListener('click', () => { const services = DataStore.getServices(); if (services.length === 0) { self.showToast("Add a service first.", 'error'); return; } const randomService = services[Math.floor(Math.random() * services.length)]; const randomHour = Math.floor(Math.random() * 8) + 9; const randomMinute = ['00','15','30','45'][Math.floor(Math.random() * 4)]; const newBooking = { customer: "Simran Kaur", carNo: "PB10XY1234", serviceId: randomService.id, time: `${String(randomHour).padStart(2, '0')}:${randomMinute}`, status: 'upcoming', source: 'online', location: randomService.type === 'doorstep' ? '456, Park Avenue, Delhi' : null }; DataStore.addBooking(newBooking); let toastMsg = `New Online Booking: ${randomService.name} at ${newBooking.time}`; if(newBooking.location) { toastMsg += ` at ${newBooking.location}`;} self.showToast(toastMsg, 'info'); self.refreshAllViews()});
 
             // Earnings Page
             document.querySelector('.filters-toolbar').addEventListener('click', e => {
